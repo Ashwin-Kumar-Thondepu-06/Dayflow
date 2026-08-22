@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { prisma } from '../config/prisma';
 
 const router = Router();
@@ -26,6 +26,7 @@ router.get('/health/database', async (req, res, next) => {
 import authRoutes from './auth.routes';
 import employeeRoutes from './employee.routes';
 import attendanceRoutes from './attendance.routes';
+import leaveRoutes from './leave.routes';
 import { authenticate } from '../middleware/authMiddleware';
 import { authorize } from '../middleware/authorize';
 
@@ -33,8 +34,10 @@ import { authorize } from '../middleware/authorize';
 router.use('/auth', authRoutes);
 router.use('/employees', employeeRoutes);
 router.use('/attendance', attendanceRoutes);
+router.use('/leaves', leaveRoutes);
 
-// Test routes for RBAC
+// Catch all unmatched routes (if this block exists, otherwise I'll just skip it and let it append)
+
 router.get('/test/public', (req, res) => {
   res.json({ message: 'Public endpoint' });
 });
