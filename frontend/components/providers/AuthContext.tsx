@@ -48,11 +48,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             router.push('/change-password');
           } else if (publicRoutes.includes(pathname)) {
             // If they are logged in, don't let them stay on public routes like /login
-            if (response.data.role === 'EMPLOYEE') {
-              router.push('/employee/dashboard');
-            } else {
-              router.push('/admin/dashboard');
-            }
+            router.push('/employees');
           }
         } else {
           setUser(null);
@@ -80,10 +76,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setUser(newUser);
     if (newUser.forcePasswordChange) {
       router.push('/change-password');
-    } else if (newUser.role === 'EMPLOYEE') {
-      router.push('/employee/dashboard');
     } else {
-      router.push('/admin/dashboard');
+      router.push('/employees');
     }
   };
 
