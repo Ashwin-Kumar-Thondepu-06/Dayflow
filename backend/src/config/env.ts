@@ -22,7 +22,8 @@ const envSchema = z.object({
 });
 
 export const parseEnv = () => {
-  dotenv.config(); // Load from standard locations
+  dotenv.config({ path: path.resolve(process.cwd(), '../.env') });
+  dotenv.config(); // fallback
   
   const parsed = envSchema.safeParse(process.env);
   

@@ -25,6 +25,10 @@ export class AuthService {
       throw new BadRequestError('Missing required fields');
     }
 
+    if (password.length < 8) {
+      throw new BadRequestError('Password must be at least 8 characters long');
+    }
+
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
       throw new BadRequestError('Email is already registered');
@@ -209,8 +213,8 @@ export class AuthService {
   }
 
   static async resetPassword(token: string, newPassword: string) {
-    if (!newPassword || newPassword.length < 6) {
-      throw new BadRequestError('Password must be at least 6 characters');
+    if (!newPassword || newPassword.length < 8) {
+      throw new BadRequestError('Password must be at least 8 characters long');
     }
 
     const record = await prisma.token.findFirst({
