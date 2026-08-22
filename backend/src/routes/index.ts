@@ -23,7 +23,7 @@ router.get('/health/database', async (req, res, next) => {
   }
 });
 
-import authRoutes from '../modules/auth/auth.routes';
+import authRoutes from './auth.routes';
 import { authenticate } from '../middleware/authMiddleware';
 import { authorize } from '../middleware/authorize';
 

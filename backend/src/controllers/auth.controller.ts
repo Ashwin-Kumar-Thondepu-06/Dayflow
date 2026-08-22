@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { AuthService } from './auth.service';
+import { AuthService } from '../services/auth.service';
 
 const setCookies = (res: Response, accessToken: string, refreshToken: string) => {
   res.cookie('accessToken', accessToken, {
