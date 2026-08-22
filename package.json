@@ -1,0 +1,23 @@
+{
+  "name": "dayflow",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Human Resource Management System",
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "dev:frontend": "npm run dev -w frontend",
+    "dev:backend": "npm run dev -w backend",
+    "build:frontend": "npm run build -w frontend",
+    "build:backend": "npm run build -w backend",
+    "lint:frontend": "npm run lint -w frontend",
+    "lint:backend": "npm run lint -w backend"
+  },
+  "devDependencies": {
+    "eslint": "^8",
+    "prettier": "^3.0.0",
+    "typescript": "^5.0.0"
+  }
+}
