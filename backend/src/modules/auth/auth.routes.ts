@@ -8,7 +8,7 @@ import {
   forgotPassword,
   resetPassword,
 } from './auth.controller';
-import rateLimit from 'express-rate-limit';
+import { rateLimit } from 'express-rate-limit';
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,

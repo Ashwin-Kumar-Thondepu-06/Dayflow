@@ -8,12 +8,15 @@ import { UserRole, TokenType } from '@prisma/client';
 
 export class AuthService {
   private static generateTokens(userId: string, role: string) {
-    if (!config.JWT_SECRET || !config.JWT_REFRESH_SECRET) {
+    const secret = config.JWT_SECRET;
+    const refreshSecret = config.JWT_REFRESH_SECRET;
+
+    if (!secret || !refreshSecret) {
       throw new Error('JWT secrets are not configured');
     }
 
-    const accessToken = jwt.sign({ userId, role }, config.JWT_SECRET, { expiresIn: '15m' });
-    const refreshToken = jwt.sign({ userId, role }, config.JWT_REFRESH_SECRET, { expiresIn: '7d' });
+    const accessToken = jwt.sign({ userId, role }, secret, { expiresIn: '15m' });
+    const refreshToken = jwt.sign({ userId, role }, refreshSecret, { expiresIn: '7d' });
 
     return { accessToken, refreshToken };
   }
@@ -125,12 +128,13 @@ export class AuthService {
       throw new UnauthorizedError('Refresh token required');
     }
 
-    if (!config.JWT_REFRESH_SECRET) {
+    const refreshSecret = config.JWT_REFRESH_SECRET;
+    if (!refreshSecret) {
       throw new Error('JWT_REFRESH_SECRET is not configured');
     }
 
     try {
-      const decoded = jwt.verify(refreshToken, config.JWT_REFRESH_SECRET) as jwt.JwtPayload;
+      const decoded = jwt.verify(refreshToken, refreshSecret) as jwt.JwtPayload;
 
       const user = await prisma.user.findUnique({ where: { id: decoded.userId } });
       if (!user || user.status !== 'ACTIVE') {
