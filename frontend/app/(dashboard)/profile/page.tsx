@@ -3,9 +3,83 @@
 import * as React from "react"
 import { User, MapPin, Phone, Mail, Briefcase, FileText, Banknote, Edit3, Save, X, Shield, Lock, CreditCard } from "lucide-react"
 
+import { useAuth } from "@/components/providers/AuthContext"
+import { fetchApi } from "@/lib/api"
+import { useToast } from "@/components/ui/use-toast"
+
 export default function ProfilePage() {
+  const { user } = useAuth()
+  const { toast } = useToast()
+  
   const [isEditing, setIsEditing] = React.useState(false)
   const [activeTab, setActiveTab] = React.useState('Private Info')
+  const [isLoading, setIsLoading] = React.useState(true)
+  const [isSaving, setIsSaving] = React.useState(false)
+
+  // Profile Data State
+  const [profileData, setProfileData] = React.useState<any>(null)
+  
+  // Form State
+  const [formData, setFormData] = React.useState({
+    firstName: '',
+    lastName: '',
+    phone: '',
+    dateOfBirth: ''
+  })
+
+  React.useEffect(() => {
+    const loadProfile = async () => {
+      if (!user?.employeeId) return
+      
+      try {
+        const response = await fetchApi(`/employees/${user.employeeId}`)
+        setProfileData(response.data)
+        setFormData({
+          firstName: response.data.firstName || '',
+          lastName: response.data.lastName || '',
+          phone: response.data.phone || '',
+          dateOfBirth: response.data.dateOfBirth ? new Date(response.data.dateOfBirth).toISOString().split('T')[0] : ''
+        })
+      } catch (error) {
+        toast({ variant: "destructive", title: "Error", description: "Failed to load profile data." })
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    loadProfile()
+  }, [user, toast])
+
+  const handleSave = async () => {
+    if (!user?.employeeId) return
+    setIsSaving(true)
+    try {
+      const response = await fetchApi(`/employees/${user.employeeId}`, {
+        method: 'PUT',
+        body: JSON.stringify(formData)
+      })
+      setProfileData(response.data)
+      setIsEditing(false)
+      toast({ title: "Success", description: "Profile updated successfully." })
+    } catch (error) {
+      toast({ variant: "destructive", title: "Error", description: "Failed to update profile." })
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-[calc(100vh-64px)] flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-slate-200 border-t-[#714B67] rounded-full animate-spin"></div>
+      </div>
+    )
+  }
+
+  if (!profileData) {
+    return <div className="p-8 text-center text-slate-500 font-bold">Profile not found.</div>
+  }
+
+  const fullName = `${profileData.firstName} ${profileData.lastName}`.trim()
 
   return (
     <div className="container max-w-5xl mx-auto py-8 px-4 sm:px-6 lg:px-8 animate-in fade-in duration-500">
@@ -41,16 +115,27 @@ export default function ProfilePage() {
               ) : (
                 <div className="flex items-center gap-2">
                   <button 
-                    onClick={() => setIsEditing(false)}
+                    onClick={() => {
+                      setIsEditing(false);
+                      // Revert changes
+                      setFormData({
+                        firstName: profileData.firstName || '',
+                        lastName: profileData.lastName || '',
+                        phone: profileData.phone || '',
+                        dateOfBirth: profileData.dateOfBirth ? new Date(profileData.dateOfBirth).toISOString().split('T')[0] : ''
+                      })
+                    }}
+                    disabled={isSaving}
                     className="flex items-center gap-2 bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 px-4 py-2 rounded-xl font-bold transition-colors text-sm"
                   >
                     Cancel
                   </button>
                   <button 
-                    onClick={() => setIsEditing(false)}
+                    onClick={handleSave}
+                    disabled={isSaving}
                     className="flex items-center gap-2 bg-[#714B67] hover:bg-[#5a3a52] text-white px-5 py-2 rounded-xl font-bold transition-colors text-sm"
                   >
-                    <Save className="h-4 w-4" /> Save
+                    {isSaving ? <span className="animate-pulse">Saving...</span> : <><Save className="h-4 w-4" /> Save</>}
                   </button>
                 </div>
               )}
@@ -60,35 +145,35 @@ export default function ProfilePage() {
               {/* Left Column */}
               <div className="space-y-4">
                 <div className="border-b border-slate-200 pb-2">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">My Name</label>
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">First Name</label>
                   {isEditing ? (
-                    <input type="text" defaultValue="Emma Granger" className="w-full font-bold text-slate-900 focus:outline-none bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200" />
+                    <input type="text" value={formData.firstName} onChange={e => setFormData({...formData, firstName: e.target.value})} className="w-full font-bold text-slate-900 focus:outline-none bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200" />
                   ) : (
-                    <div className="font-bold text-slate-900 text-lg">Emma Granger</div>
+                    <div className="font-bold text-slate-900 text-lg">{profileData.firstName}</div>
                   )}
                 </div>
                 <div className="border-b border-slate-200 pb-2">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Job Position</label>
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Last Name</label>
                   {isEditing ? (
-                    <input type="text" defaultValue="Consultant" className="w-full font-bold text-slate-900 focus:outline-none bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200" />
+                    <input type="text" value={formData.lastName} onChange={e => setFormData({...formData, lastName: e.target.value})} className="w-full font-bold text-slate-900 focus:outline-none bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200" />
                   ) : (
-                    <div className="font-bold text-slate-700">Consultant</div>
+                    <div className="font-bold text-slate-900 text-lg">{profileData.lastName}</div>
                   )}
                 </div>
                 <div className="border-b border-slate-200 pb-2">
                   <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Email</label>
                   {isEditing ? (
-                    <input type="email" defaultValue="granger@mycompany.example.com" className="w-full font-bold text-slate-900 focus:outline-none bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200" />
+                    <input type="email" value={profileData.user?.email || ''} disabled className="w-full font-bold text-slate-400 focus:outline-none bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200 cursor-not-allowed" />
                   ) : (
-                    <div className="font-bold text-slate-700">granger@mycompany.example.com</div>
+                    <div className="font-bold text-slate-700">{profileData.user?.email || 'N/A'}</div>
                   )}
                 </div>
                 <div className="border-b border-slate-200 pb-2">
                   <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Mobile</label>
                   {isEditing ? (
-                    <input type="text" defaultValue="(555)-768-6230" className="w-full font-bold text-slate-900 focus:outline-none bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200" />
+                    <input type="text" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="w-full font-bold text-slate-900 focus:outline-none bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200" />
                   ) : (
-                    <div className="font-bold text-slate-700">(555)-768-6230</div>
+                    <div className="font-bold text-slate-700">{profileData.phone || 'N/A'}</div>
                   )}
                 </div>
               </div>
@@ -96,36 +181,20 @@ export default function ProfilePage() {
               {/* Right Column */}
               <div className="space-y-4">
                 <div className="border-b border-slate-200 pb-2">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Company</label>
-                  {isEditing ? (
-                    <input type="text" defaultValue="Dayflow" className="w-full font-bold text-slate-900 focus:outline-none bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200" />
-                  ) : (
-                    <div className="font-bold text-slate-700">Dayflow</div>
-                  )}
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Job Position</label>
+                  <div className="font-bold text-slate-700 pt-1">{profileData.designation?.name || 'Employee'}</div>
                 </div>
                 <div className="border-b border-slate-200 pb-2">
                   <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Department</label>
-                  {isEditing ? (
-                    <input type="text" defaultValue="Research & Development" className="w-full font-bold text-slate-900 focus:outline-none bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200" />
-                  ) : (
-                    <div className="font-bold text-slate-700">Research & Development</div>
-                  )}
+                  <div className="font-bold text-slate-700 pt-1">{profileData.department?.name || 'General'}</div>
                 </div>
                 <div className="border-b border-slate-200 pb-2">
                   <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Manager</label>
-                  {isEditing ? (
-                    <input type="text" defaultValue="Michael Williams" className="w-full font-bold text-slate-900 focus:outline-none bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200" />
-                  ) : (
-                    <div className="font-bold text-slate-700">Michael Williams</div>
-                  )}
+                  <div className="font-bold text-slate-700 pt-1">{profileData.manager ? `${profileData.manager.firstName} ${profileData.manager.lastName}` : 'None'}</div>
                 </div>
                 <div className="border-b border-slate-200 pb-2">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Location</label>
-                  {isEditing ? (
-                    <input type="text" defaultValue="Remote - India" className="w-full font-bold text-slate-900 focus:outline-none bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200" />
-                  ) : (
-                    <div className="font-bold text-slate-700">Remote - India</div>
-                  )}
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Employee Code</label>
+                  <div className="font-bold text-slate-700 pt-1">{profileData.employeeCode}</div>
                 </div>
               </div>
             </div>
@@ -270,7 +339,7 @@ export default function ProfilePage() {
                 <div className="grid grid-cols-3 items-center pt-2">
                   <label className="text-sm font-semibold text-slate-500">Emp Code</label>
                   <div className="col-span-2">
-                    <span className="text-sm font-bold text-slate-800 uppercase bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">EMP-2023-014</span>
+                    <span className="text-sm font-bold text-slate-800 uppercase bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">{profileData.employeeCode || 'N/A'}</span>
                   </div>
                 </div>
               </div>

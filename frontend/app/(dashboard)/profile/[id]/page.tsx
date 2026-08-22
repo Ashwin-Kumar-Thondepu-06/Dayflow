@@ -100,22 +100,86 @@ export default function EmployeeProfilePage({ params }: { params: { id: string }
   const isAdmin = user?.role === 'COMPANY' || user?.role === 'ADMIN'
   const [activeTab, setActiveTab] = React.useState('Work')
 
-  // Salary Calculator State
+  // Real Data State
+  const [employee, setEmployee] = React.useState<any>(null)
+  const [isLoading, setIsLoading] = React.useState(true)
+
+  // Salary Calculator State (Keep existing demo logic for salary tab)
   const [monthWage, setMonthWage] = React.useState<number>(50000)
   const yearlyWage = monthWage * 12
-  
-  // Formulas based on wireframe logic
   const basic = monthWage * 0.5
   const hra = basic * 0.5
   const standardAllowance = monthWage * 0.1667
   const performanceBonus = monthWage * 0.0833
   const leaveTravel = monthWage * 0.0833
   const fixedAllowance = monthWage - (basic + hra + standardAllowance + performanceBonus + leaveTravel)
-  
   const pf = basic * 0.12
-  const tax = 200 // Fixed professional tax
+  const tax = 200 
   const totalDeductions = pf + tax
   const netPay = monthWage - totalDeductions
+
+  // Fetch Employee Data
+  React.useEffect(() => {
+    const fetchEmployeeData = async () => {
+      try {
+        const response = await fetchApi(`/employees/${params.id}`)
+        setEmployee(response.data)
+      } catch (error) {
+        console.error("Failed to fetch employee", error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    fetchEmployeeData()
+  }, [params.id])
+
+  // Build Dynamic Org Chart Data
+  let orgData: OrgNodeData | null = null
+  if (employee) {
+    const subordinates = employee.subordinates?.map((sub: any) => ({
+      id: sub.id,
+      name: `${sub.firstName} ${sub.lastName}`.trim(),
+      role: sub.designation?.name || 'Employee'
+    })) || []
+
+    const currentNode: OrgNodeData = {
+      id: employee.id,
+      name: `${employee.firstName} ${employee.lastName}`.trim(),
+      role: employee.designation?.name || 'Employee',
+      children: subordinates
+    }
+
+    if (employee.manager) {
+      orgData = {
+        id: employee.manager.id,
+        name: `${employee.manager.firstName} ${employee.manager.lastName}`.trim(),
+        role: 'Manager', // Can't eagerly fetch manager's designation in current query, fallback
+        isRoot: true,
+        children: [currentNode]
+      }
+    } else {
+      currentNode.isRoot = true
+      orgData = currentNode
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-[calc(100vh-64px)] flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-slate-200 border-t-teal-600 rounded-full animate-spin"></div>
+      </div>
+    )
+  }
+
+  if (!employee) {
+    return <div className="p-8 text-center text-slate-500 font-bold">Employee not found.</div>
+  }
+
+  const fullName = `${employee.firstName} ${employee.lastName}`.trim()
+  const email = employee.user?.email || 'N/A'
+  const phone = employee.phone || 'N/A'
+  const designation = employee.designation?.name || 'Employee'
+  const department = employee.department?.name || 'General'
 
   return (
     <div className="min-h-[calc(100vh-64px)] bg-slate-50 p-6 lg:p-8 animate-in fade-in duration-300">
@@ -147,34 +211,26 @@ export default function EmployeeProfilePage({ params }: { params: { id: string }
             {/* Header Details */}
             <div className="flex-1 pt-4">
               <div className="flex items-center gap-3 mb-4">
-                <h1 className="text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight">Emma Granger</h1>
-                <span className="bg-emerald-50 text-emerald-700 font-bold text-xs px-2.5 py-1 rounded-md border border-emerald-200">Active</span>
+                <h1 className="text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight">{fullName}</h1>
+                <span className="bg-emerald-50 text-emerald-700 font-bold text-xs px-2.5 py-1 rounded-md border border-emerald-200">{employee.status}</span>
               </div>
               
               <div className="flex flex-col sm:flex-row gap-y-4 gap-x-8">
                 <div className="space-y-2.5">
                   <div className="flex items-center gap-2 text-[15px]">
                     <Briefcase className="h-4 w-4 text-slate-400" />
-                    <span className="text-slate-700 font-medium">Consultant</span>
+                    <span className="text-slate-700 font-medium">{designation}</span>
                   </div>
                   <div className="flex items-center gap-2 text-[15px]">
                     <Mail className="h-4 w-4 text-slate-400" />
-                    <a href="mailto:granger@mycompany.example.com" className="text-teal-600 hover:underline font-medium">granger@mycompany.example.com</a>
+                    <a href={`mailto:${email}`} className="text-teal-600 hover:underline font-medium">{email}</a>
                   </div>
                 </div>
 
                 <div className="space-y-2.5">
                   <div className="flex items-center gap-2 text-[15px]">
                     <Phone className="h-4 w-4 text-slate-400" />
-                    <span className="text-slate-700 font-medium">(555)-768-6230</span>
-                    <div className="flex items-center gap-2 ml-1 text-xs font-bold text-teal-600">
-                      <button className="flex items-center gap-1 hover:underline"><Phone className="h-3 w-3" /> Call</button>
-                      <button className="flex items-center gap-1 hover:underline"><Smartphone className="h-3 w-3" /> SMS</button>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 text-[15px]">
-                    <Smartphone className="h-4 w-4 text-slate-400" />
-                    <span className="text-slate-700 font-medium">(555)-768-6235</span>
+                    <span className="text-slate-700 font-medium">{phone}</span>
                     <div className="flex items-center gap-2 ml-1 text-xs font-bold text-teal-600">
                       <button className="flex items-center gap-1 hover:underline"><Phone className="h-3 w-3" /> Call</button>
                       <button className="flex items-center gap-1 hover:underline"><Smartphone className="h-3 w-3" /> SMS</button>
@@ -277,7 +333,11 @@ export default function EmployeeProfilePage({ params }: { params: { id: string }
 
                   <div className="pt-2 pl-4 pb-8 overflow-x-auto">
                     {/* Render the recursive dynamic org chart */}
-                    <OrgChartNode node={ORG_DATA} />
+                    {orgData ? (
+                      <OrgChartNode node={orgData} />
+                    ) : (
+                      <p className="text-sm text-slate-500 font-medium">No organizational hierarchy available.</p>
+                    )}
                   </div>
                 </div>
 

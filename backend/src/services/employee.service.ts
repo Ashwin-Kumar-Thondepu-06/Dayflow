@@ -71,4 +71,61 @@ export class EmployeeService {
       generatedPassword: plaintextPassword, // Returned ONLY once so admin can share it
     };
   }
+
+  static async getAllEmployees(companyId: string) {
+    return prisma.employee.findMany({
+      where: { companyId },
+      include: {
+        user: { select: { email: true, status: true, role: true } },
+        department: true,
+        designation: true,
+        manager: { select: { firstName: true, lastName: true } }
+      },
+      orderBy: { firstName: 'asc' }
+    });
+  }
+
+  static async getEmployeeById(companyId: string, id: string) {
+    const employee = await prisma.employee.findFirst({
+      where: { id, companyId },
+      include: {
+        user: { select: { email: true, status: true, role: true } },
+        department: true,
+        designation: true,
+        manager: { select: { id: true, firstName: true, lastName: true, employeeCode: true } },
+        subordinates: { select: { id: true, firstName: true, lastName: true, employeeCode: true, designation: true } }
+      }
+    });
+
+    if (!employee) {
+      throw new BadRequestError('Employee not found');
+    }
+    return employee;
+  }
+
+  static async updateEmployee(companyId: string, id: string, data: Record<string, any>) {
+    // Only allow updating specific fields
+    const { firstName, lastName, phone, dateOfBirth, departmentId, designationId, managerId } = data;
+    
+    // Validate if employee exists
+    await this.getEmployeeById(companyId, id);
+
+    return prisma.employee.update({
+      where: { id },
+      data: {
+        firstName,
+        lastName,
+        phone,
+        dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
+        departmentId,
+        designationId,
+        managerId
+      },
+      include: {
+        user: { select: { email: true } },
+        department: true,
+        designation: true
+      }
+    });
+  }
 }

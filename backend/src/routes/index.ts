@@ -25,12 +25,14 @@ router.get('/health/database', async (req, res, next) => {
 
 import authRoutes from './auth.routes';
 import employeeRoutes from './employee.routes';
+import attendanceRoutes from './attendance.routes';
 import { authenticate } from '../middleware/authMiddleware';
 import { authorize } from '../middleware/authorize';
 
 // Feature routes will be registered here in the future
 router.use('/auth', authRoutes);
 router.use('/employees', employeeRoutes);
+router.use('/attendance', attendanceRoutes);
 
 // Test routes for RBAC
 router.get('/test/public', (req, res) => {

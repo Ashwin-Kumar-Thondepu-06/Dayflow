@@ -3,34 +3,24 @@
 import * as React from "react"
 import { Search, ChevronLeft, ChevronRight, Calendar, User, Clock, FileText, CalendarDays, Filter } from "lucide-react"
 import { useAuth } from "@/components/providers/AuthContext"
-
-// --- MOCK DATA ---
-const ADMIN_ATTENDANCE_DATA = [
-  { id: "1", name: "Emma Granger", checkIn: "10:00 AM", checkOut: "07:00 PM", workHours: "09:00", extraHours: "01:00", status: "Present" },
-  { id: "2", name: "Michael Williams", checkIn: "09:30 AM", checkOut: "06:30 PM", workHours: "09:00", extraHours: "00:00", status: "Present" },
-  { id: "3", name: "John Doe", checkIn: "10:15 AM", checkOut: "08:15 PM", workHours: "10:00", extraHours: "02:00", status: "Present" },
-  { id: "4", name: "Sarah Jenkins", checkIn: "--:--", checkOut: "--:--", workHours: "00:00", extraHours: "00:00", status: "Leave" },
-  { id: "5", name: "Alex Johnson", checkIn: "09:00 AM", checkOut: "05:00 PM", workHours: "08:00", extraHours: "00:00", status: "Present" },
-]
-
-const EMPLOYEE_ATTENDANCE_DATA = [
-  { id: "1", date: "24 Oct 2025", checkIn: "10:00 AM", checkOut: "07:00 PM", workHours: "09:00", extraHours: "01:00", status: "Present" },
-  { id: "2", date: "23 Oct 2025", checkIn: "09:45 AM", checkOut: "06:45 PM", workHours: "09:00", extraHours: "01:00", status: "Present" },
-  { id: "3", date: "22 Oct 2025", checkIn: "--:--", checkOut: "--:--", workHours: "00:00", extraHours: "00:00", status: "Leave" },
-  { id: "4", date: "21 Oct 2025", checkIn: "10:00 AM", checkOut: "06:00 PM", workHours: "08:00", extraHours: "00:00", status: "Present" },
-  { id: "5", date: "20 Oct 2025", checkIn: "10:30 AM", checkOut: "07:30 PM", workHours: "09:00", extraHours: "01:00", status: "Present" },
-]
+import { fetchApi } from "@/lib/api"
+import { useToast } from "@/components/ui/use-toast"
 
 export default function AttendancePage() {
   const { user } = useAuth()
+  const { toast } = useToast()
   const isAdmin = user?.role === 'COMPANY' || user?.role === 'ADMIN'
+
+  // Global State
+  const [attendanceData, setAttendanceData] = React.useState<any[]>([])
+  const [isLoading, setIsLoading] = React.useState(true)
 
   // Admin State
   const [searchQuery, setSearchQuery] = React.useState("")
-  const [currentDate, setCurrentDate] = React.useState(new Date(2025, 9, 22)) // Oct 22, 2025
+  const [currentDate, setCurrentDate] = React.useState(new Date()) // Today
   
   // Employee State
-  const [currentMonth, setCurrentMonth] = React.useState(new Date(2025, 9, 1)) // Oct 2025
+  const [currentMonth, setCurrentMonth] = React.useState(new Date()) // Current Month
   
   // Handlers for Date/Month navigation
   const prevDate = () => setCurrentDate(new Date(currentDate.setDate(currentDate.getDate() - 1)))
@@ -42,14 +32,55 @@ export default function AttendancePage() {
   const formattedDate = currentDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
   const formattedMonth = currentMonth.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })
 
+  React.useEffect(() => {
+    const fetchAttendance = async () => {
+      setIsLoading(true)
+      try {
+        if (isAdmin) {
+          // Admin View: Fetch daily roster
+          const dateStr = currentDate.toISOString()
+          const response = await fetchApi(`/attendance?date=${dateStr}`)
+          setAttendanceData(response.data || [])
+        } else {
+          // Employee View: Fetch monthly roster
+          const year = currentMonth.getFullYear()
+          const month = currentMonth.getMonth() + 1
+          const response = await fetchApi(`/attendance/me?year=${year}&month=${month}`)
+          setAttendanceData(response.data || [])
+        }
+      } catch (error) {
+        toast({ variant: "destructive", title: "Error", description: "Failed to load attendance records." })
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    
+    // Only fetch if we know the user role
+    if (user) {
+      fetchAttendance()
+    }
+  }, [user, isAdmin, currentDate, currentMonth, toast])
+
+  // Helpers to format time
+  const formatTime = (isoString: string | null) => {
+    if (!isoString) return '--:--'
+    return new Date(isoString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  }
+  const formatHours = (minutes: number) => {
+    if (!minutes) return '00:00'
+    const h = Math.floor(minutes / 60).toString().padStart(2, '0')
+    const m = (minutes % 60).toString().padStart(2, '0')
+    return `${h}:${m}`
+  }
+
   // Employee Derived Stats
-  const daysPresent = EMPLOYEE_ATTENDANCE_DATA.filter(d => d.status === "Present").length
-  const leavesCount = EMPLOYEE_ATTENDANCE_DATA.filter(d => d.status === "Leave").length
+  const daysPresent = attendanceData.filter(d => d.status === "PRESENT").length
+  const leavesCount = attendanceData.filter(d => d.status === "LEAVE").length
   const totalWorkingDays = 22 // Mock constant for the month
 
   // Filter Admin Data
-  const filteredAdminData = ADMIN_ATTENDANCE_DATA.filter(emp => 
-    emp.name.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredAdminData = attendanceData.filter(emp => 
+    (emp.employeeName || '').toLowerCase().includes(searchQuery.toLowerCase())
   )
 
   return (
@@ -92,8 +123,14 @@ export default function AttendancePage() {
         </div>
 
         {/* Main Content Area */}
-        <div className="bg-white rounded-3xl shadow-sm border border-slate-200/60 overflow-hidden">
+        <div className="bg-white rounded-3xl shadow-sm border border-slate-200/60 overflow-hidden relative">
           
+          {isLoading && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/50 backdrop-blur-sm">
+              <div className="w-8 h-8 border-4 border-slate-200 border-t-[#714B67] rounded-full animate-spin"></div>
+            </div>
+          )}
+
           {/* Toolbar */}
           <div className="px-6 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-50/30">
             
@@ -161,22 +198,22 @@ export default function AttendancePage() {
                   // ADMIN VIEW: List of employees for a specific date
                   filteredAdminData.length > 0 ? (
                     filteredAdminData.map((record) => (
-                      <tr key={record.id} className="hover:bg-slate-50/50 transition-colors group">
+                      <tr key={record.employeeId} className="hover:bg-slate-50/50 transition-colors group">
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
                             <div className="h-9 w-9 rounded-lg bg-slate-100 flex items-center justify-center shrink-0 border border-slate-200">
                               <User className="h-4 w-4 text-slate-400" />
                             </div>
-                            <span className="font-bold text-slate-900 group-hover:text-[#714B67] transition-colors">{record.name}</span>
-                            {record.status === 'Leave' && (
+                            <span className="font-bold text-slate-900 group-hover:text-[#714B67] transition-colors">{record.employeeName}</span>
+                            {record.status === 'LEAVE' && (
                               <span className="ml-2 bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">Leave</span>
                             )}
                           </div>
                         </td>
-                        <td className="px-6 py-4 font-semibold text-slate-600">{record.checkIn}</td>
-                        <td className="px-6 py-4 font-semibold text-slate-600">{record.checkOut}</td>
-                        <td className="px-6 py-4 font-semibold text-slate-800">{record.workHours}</td>
-                        <td className="px-6 py-4 font-bold text-teal-600 text-right">{record.extraHours}</td>
+                        <td className="px-6 py-4 font-semibold text-slate-600">{formatTime(record.checkIn)}</td>
+                        <td className="px-6 py-4 font-semibold text-slate-600">{formatTime(record.checkOut)}</td>
+                        <td className="px-6 py-4 font-semibold text-slate-800">{formatHours(record.workMinutes)}</td>
+                        <td className="px-6 py-4 font-bold text-teal-600 text-right">{formatHours(record.overtimeMinutes)}</td>
                       </tr>
                     ))
                   ) : (
@@ -188,22 +225,30 @@ export default function AttendancePage() {
                   )
                 ) : (
                   // EMPLOYEE VIEW: List of dates for a specific month
-                  EMPLOYEE_ATTENDANCE_DATA.map((record) => (
-                    <tr key={record.id} className="hover:bg-slate-50/50 transition-colors group">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <span className="font-bold text-slate-900">{record.date}</span>
-                          {record.status === 'Leave' && (
-                            <span className="ml-2 bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">Leave</span>
-                          )}
-                        </div>
+                  attendanceData.length > 0 ? (
+                    attendanceData.map((record) => (
+                      <tr key={record.id} className="hover:bg-slate-50/50 transition-colors group">
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <span className="font-bold text-slate-900">{new Date(record.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                            {record.status === 'LEAVE' && (
+                              <span className="ml-2 bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">Leave</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 font-semibold text-slate-600">{formatTime(record.checkIn)}</td>
+                        <td className="px-6 py-4 font-semibold text-slate-600">{formatTime(record.checkOut)}</td>
+                        <td className="px-6 py-4 font-semibold text-slate-800">{formatHours(record.workMinutes)}</td>
+                        <td className="px-6 py-4 font-bold text-teal-600 text-right">{formatHours(record.overtimeMinutes)}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={5} className="px-6 py-12 text-center text-slate-500 font-medium">
+                        No attendance records found for this month.
                       </td>
-                      <td className="px-6 py-4 font-semibold text-slate-600">{record.checkIn}</td>
-                      <td className="px-6 py-4 font-semibold text-slate-600">{record.checkOut}</td>
-                      <td className="px-6 py-4 font-semibold text-slate-800">{record.workHours}</td>
-                      <td className="px-6 py-4 font-bold text-teal-600 text-right">{record.extraHours}</td>
                     </tr>
-                  ))
+                  )
                 )}
               </tbody>
             </table>

@@ -8,38 +8,9 @@ import { useAuth } from "@/components/providers/AuthContext"
 import { fetchApi } from "@/lib/api"
 import { useToast } from "@/components/ui/use-toast"
 
-const INITIAL_EMPLOYEES = [
-  { 
-    id: "1", 
-    name: "Emma Granger", 
-    role: "Consultant", 
-    email: "granger@mycompany.example.com",
-    phone: "(555)-768-6230",
-    tags: [{ text: "Consultant", color: "bg-blue-100/80 text-blue-700" }, { text: "Demo", color: "bg-orange-100/80 text-orange-700" }],
-    status: "absent" 
-  },
-  { 
-    id: "2", 
-    name: "Michael Williams", 
-    role: "Chief Executive Officer", 
-    email: "williams@mycompany.example.com",
-    phone: "(555)-768-6230",
-    tags: [{ text: "Employee", color: "bg-orange-50/80 text-orange-700" }, { text: "Demo", color: "bg-orange-100/80 text-orange-700" }],
-    status: "leave" 
-  },
-  { 
-    id: "3", 
-    name: "Simon Jones", 
-    role: "Experienced Developer", 
-    email: "jones@mycompany.example.com",
-    phone: "(555)-768-6230",
-    tags: [{ text: "Employee", color: "bg-orange-50/80 text-orange-700" }, { text: "Demo", color: "bg-orange-100/80 text-orange-700" }],
-    status: "present" 
-  },
-]
-
 export default function EmployeesPage() {
-  const [employees, setEmployees] = React.useState(INITIAL_EMPLOYEES)
+  const [employees, setEmployees] = React.useState<any[]>([])
+  const [isLoading, setIsLoading] = React.useState(true)
   const [isSidebarExpanded, setIsSidebarExpanded] = React.useState(false)
   const [activeDepartment, setActiveDepartment] = React.useState("All")
   const [viewMode, setViewMode] = React.useState<'kanban' | 'list'>('kanban')
@@ -52,9 +23,35 @@ export default function EmployeesPage() {
   
   const { isCheckedIn } = React.useContext(AttendanceContext)
 
+  // Fetch real employees on mount
+  React.useEffect(() => {
+    const loadEmployees = async () => {
+      try {
+        const response = await fetchApi('/employees')
+        // Transform the backend data slightly to match the frontend expectations
+        const mappedData = response.data.map((emp: any) => ({
+          id: emp.id,
+          name: `${emp.firstName} ${emp.lastName}`.trim(),
+          role: emp.designation?.name || 'Employee',
+          email: emp.user?.email || '',
+          phone: emp.phone || 'N/A',
+          tags: [{ text: emp.department?.name || 'General', color: "bg-blue-100/80 text-blue-700" }],
+          status: emp.status === 'ON_LEAVE' ? 'leave' : 'present', // Simplified status for demo
+          originalData: emp
+        }))
+        setEmployees(mappedData)
+      } catch (error) {
+        toast({ variant: "destructive", title: "Error", description: "Failed to load employees." })
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    loadEmployees()
+  }, [toast])
+
   // Function to render the correct status indicator based on wireframe legend
   const renderStatus = (status: string, isCurrentUser: boolean = false) => {
-    // If it's the current user (Emma), override status based on Context
+    // If it's the current user, override status based on Context
     const effectiveStatus = isCurrentUser ? (isCheckedIn ? "present" : "absent") : status
 
     if (effectiveStatus === "present") {
@@ -79,50 +76,36 @@ export default function EmployeesPage() {
     const formData = new FormData(e.currentTarget)
     
     try {
-      // In a real scenario you would parse this data according to your backend DTO
       const payload = {
         firstName: (formData.get("name") as string).split(' ')[0],
-        lastName: (formData.get("name") as string).split(' ').slice(1).join(' ') || ' ',
+        lastName: (formData.get("name") as string).split(' ').slice(1).join(' ') || '',
         email: formData.get("email") as string,
-        mobileNumber: formData.get("phone") as string,
-        jobPosition: formData.get("role") as string,
+        phone: formData.get("phone") as string,
+        // Optional mapping could go here (e.g. mapping string role to designationId)
       }
 
-      // We wrap it in a try catch to call the real API, but for now we fallback to pushing to state if the backend isn't ready
-      let newEmp: any;
-      try {
-        const response = await fetchApi('/employees', {
-          method: 'POST',
-          body: JSON.stringify(payload)
-        })
-        newEmp = {
-          id: response.data.id || Math.random().toString(),
-          name: formData.get("name") as string,
-          role: formData.get("role") as string,
-          email: formData.get("email") as string,
-          phone: formData.get("phone") as string,
-          tags: [{ text: "Employee", color: "bg-emerald-50 text-emerald-700" }],
-          status: "present"
-        }
-        toast({ title: "Success", description: "Employee created successfully." })
-      } catch (apiError) {
-        console.error("API failed, using local fallback", apiError)
-        newEmp = {
-          id: Math.random().toString(),
-          name: formData.get("name") as string,
-          role: formData.get("role") as string,
-          email: formData.get("email") as string,
-          phone: formData.get("phone") as string,
-          tags: [{ text: "Employee", color: "bg-emerald-50 text-emerald-700" }],
-          status: "present"
-        }
-        toast({ title: "Success (Local Fallback)", description: "Employee added to UI." })
+      const response = await fetchApi('/employees', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      })
+      
+      const newEmpData = response.data
+      
+      const newEmp = {
+        id: newEmpData.employeeId,
+        name: formData.get("name") as string,
+        role: formData.get("role") as string || 'Employee', // fallback since role isn't directly passed to backend yet
+        email: formData.get("email") as string,
+        phone: formData.get("phone") as string,
+        tags: [{ text: "New", color: "bg-emerald-50 text-emerald-700" }],
+        status: "present"
       }
+      toast({ title: "Success", description: "Employee created successfully. Password: " + newEmpData.generatedPassword })
       
       setEmployees([...employees, newEmp])
       setIsNewEmployeeModalOpen(false)
-    } catch (error) {
-      toast({ variant: "destructive", title: "Error", description: "Could not create employee." })
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "Error", description: error.message || "Could not create employee." })
     }
   }
 
@@ -258,7 +241,13 @@ export default function EmployeesPage() {
           </div>
 
           {/* Employee Content Area */}
-          <div className="flex-1 overflow-auto p-6 lg:p-8">
+          <div className="flex-1 overflow-auto p-6 lg:p-8 relative">
+            {isLoading && (
+              <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/50 backdrop-blur-sm">
+                <div className="w-8 h-8 border-4 border-slate-200 border-t-[#714B67] rounded-full animate-spin"></div>
+              </div>
+            )}
+            
             {viewMode === 'kanban' ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {employees.map((employee) => (

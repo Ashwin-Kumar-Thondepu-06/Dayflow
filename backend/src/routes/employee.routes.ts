@@ -1,11 +1,16 @@
 import { Router } from 'express';
-import { createEmployee } from '../controllers/employee.controller';
+import { createEmployee, getAllEmployees, getEmployeeById, updateEmployee } from '../controllers/employee.controller';
 import { authenticate } from '../middleware/authMiddleware';
 import { authorize } from '../middleware/authorize';
 
 const router = Router();
 
-// Only ADMIN can create employees
-router.post('/', authenticate, authorize('ADMIN'), createEmployee);
+// Only ADMIN/COMPANY can create employees
+router.post('/', authenticate, authorize('ADMIN', 'COMPANY'), createEmployee);
+
+// Everyone authenticated can access these, but controller logic restricts access
+router.get('/', authenticate, getAllEmployees);
+router.get('/:id', authenticate, getEmployeeById);
+router.put('/:id', authenticate, updateEmployee);
 
 export default router;
