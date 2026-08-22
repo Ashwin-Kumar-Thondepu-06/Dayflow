@@ -51,8 +51,6 @@ export const refresh = async (req: Request, res: Response, next: NextFunction) =
 
 export const logout = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    // Attempt to log out from DB if accessToken exists (optional)
-    const authHeader = req.headers.authorization;
     // Just clear cookies as basic logout
     res.clearCookie('accessToken');
     res.clearCookie('refreshToken');

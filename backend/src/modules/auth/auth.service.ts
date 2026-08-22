@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 import { prisma } from '../../config/prisma';
 import { config } from '../../config';
-import { BadRequestError, UnauthorizedError, NotFoundError } from '../../utils/AppError';
+import { BadRequestError, UnauthorizedError } from '../../utils/AppError';
 import { UserRole, TokenType } from '@prisma/client';
 
 export class AuthService {
@@ -18,7 +18,7 @@ export class AuthService {
     return { accessToken, refreshToken };
   }
 
-  static async register(data: any) {
+  static async register(data: Record<string, string>) {
     const { employeeCode, email, password, role } = data;
 
     if (!employeeCode || !email || !password || !role) {
@@ -66,7 +66,7 @@ export class AuthService {
     };
   }
 
-  static async login(data: any) {
+  static async login(data: Record<string, string>) {
     const { email, password } = data;
 
     if (!email || !password) {
@@ -130,7 +130,7 @@ export class AuthService {
     }
 
     try {
-      const decoded = jwt.verify(refreshToken, config.JWT_REFRESH_SECRET) as any;
+      const decoded = jwt.verify(refreshToken, config.JWT_REFRESH_SECRET) as jwt.JwtPayload;
 
       const user = await prisma.user.findUnique({ where: { id: decoded.userId } });
       if (!user || user.status !== 'ACTIVE') {

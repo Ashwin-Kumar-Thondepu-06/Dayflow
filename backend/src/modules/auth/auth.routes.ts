@@ -8,7 +8,6 @@ import {
   forgotPassword,
   resetPassword,
 } from './auth.controller';
-import { apiRateLimiter } from '../../middleware/rateLimiter';
 import rateLimit from 'express-rate-limit';
 
 const authLimiter = rateLimit({

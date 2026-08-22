@@ -26,7 +26,6 @@ router.get('/health/database', async (req, res, next) => {
 import authRoutes from '../modules/auth/auth.routes';
 import { authenticate } from '../middleware/authMiddleware';
 import { authorize } from '../middleware/authorize';
-import { checkOwnership } from '../middleware/checkOwnership';
 
 // Feature routes will be registered here in the future
 router.use('/auth', authRoutes);
