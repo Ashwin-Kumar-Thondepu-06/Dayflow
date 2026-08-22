@@ -5,23 +5,24 @@ import { prisma } from '../config/prisma';
 import { config } from '../config';
 import { BadRequestError, UnauthorizedError } from '../utils/AppError';
 import { UserRole, TokenType } from '@prisma/client';
+import { generateEmployeeCode } from '../utils/generateId';
 
 export class AuthService {
-  private static generateTokens(userId: string, role: string) {
+  private static generateTokens(userId: string, role: string, companyId: string) {
     if (!config.JWT_SECRET || !config.JWT_REFRESH_SECRET) {
       throw new Error('JWT secrets are not configured');
     }
 
-    const accessToken = jwt.sign({ userId, role }, config.JWT_SECRET, { expiresIn: '15m' });
-    const refreshToken = jwt.sign({ userId, role }, config.JWT_REFRESH_SECRET, { expiresIn: '7d' });
+    const accessToken = jwt.sign({ userId, role, companyId }, config.JWT_SECRET, { expiresIn: '15m' });
+    const refreshToken = jwt.sign({ userId, role, companyId }, config.JWT_REFRESH_SECRET, { expiresIn: '7d' });
 
     return { accessToken, refreshToken };
   }
 
   static async register(data: Record<string, string>) {
-    const { employeeCode, email, password, role } = data;
+    const { companyName, logoUrl, firstName, lastName, email, phone, password } = data;
 
-    if (!employeeCode || !email || !password || !role) {
+    if (!companyName || !firstName || !email || !password) {
       throw new BadRequestError('Missing required fields');
     }
 
@@ -34,35 +35,53 @@ export class AuthService {
       throw new BadRequestError('Email is already registered');
     }
 
-    const existingEmployee = await prisma.employee.findUnique({ where: { employeeCode } });
-    if (existingEmployee) {
-      throw new BadRequestError('Employee code is already in use');
+    const existingCompany = await prisma.company.findUnique({ where: { name: companyName } });
+    if (existingCompany) {
+      throw new BadRequestError('Company name is already registered');
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
+    
+    // Auto-generate employee code for the Admin
+    const employeeCode = await generateEmployeeCode(companyName, firstName, lastName);
 
-    const user = await prisma.user.create({
-      data: {
-        email,
-        passwordHash,
-        role: role as UserRole,
-        employee: {
-          create: {
-            employeeCode,
-            firstName: 'New', // Placeholders
-            lastName: 'User',
-            joiningDate: new Date(),
+    const user = await prisma.$transaction(async (tx) => {
+      const company = await tx.company.create({
+        data: {
+          name: companyName,
+          logoUrl,
+        },
+      });
+
+      return await tx.user.create({
+        data: {
+          email,
+          passwordHash,
+          role: UserRole.ADMIN,
+          companyId: company.id,
+          employee: {
+            create: {
+              companyId: company.id,
+              employeeCode,
+              firstName,
+              lastName: lastName || '',
+              phone: phone || null,
+              joiningDate: new Date(),
+            },
           },
         },
-      },
-      include: { employee: true },
+        include: { employee: true, company: true },
+      });
     });
 
     return {
       id: user.id,
       email: user.email,
       role: user.role,
+      companyId: user.companyId,
+      companyName: user.company.name,
       employeeId: user.employee?.id,
+      employeeCode: user.employee?.employeeCode,
     };
   }
 
@@ -87,7 +106,7 @@ export class AuthService {
       throw new UnauthorizedError('Account is not active');
     }
 
-    const tokens = this.generateTokens(user.id, user.role);
+    const tokens = this.generateTokens(user.id, user.role, user.companyId);
 
     // Save refresh token
     const tokenHash = await bcrypt.hash(tokens.refreshToken, 10);
@@ -115,6 +134,7 @@ export class AuthService {
         email: user.email,
         role: user.role,
         employeeId: user.employee?.id,
+        forcePasswordChange: user.forcePasswordChange,
       },
       ...tokens,
     };
@@ -144,7 +164,7 @@ export class AuthService {
         where: { userId: user.id, type: TokenType.REFRESH_TOKEN },
       });
 
-      const tokens = this.generateTokens(user.id, user.role);
+      const tokens = this.generateTokens(user.id, user.role, user.companyId);
       
       const tokenHash = await bcrypt.hash(tokens.refreshToken, 10);
       const expiresAt = new Date();
@@ -234,6 +254,32 @@ export class AuthService {
 
     await prisma.token.deleteMany({
       where: { userId: record.userId, type: TokenType.RESET_PASSWORD },
+    });
+  }
+
+  static async changePassword(userId: string, currentPassword: string, newPassword: string) {
+    if (!newPassword || newPassword.length < 8) {
+      throw new BadRequestError('New password must be at least 8 characters long');
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new UnauthorizedError('User not found');
+    }
+
+    const isMatch = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!isMatch) {
+      throw new BadRequestError('Incorrect current password');
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { 
+        passwordHash,
+        forcePasswordChange: false 
+      },
     });
   }
 }

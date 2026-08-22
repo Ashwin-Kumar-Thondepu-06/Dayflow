@@ -6,6 +6,9 @@ export const metadata: Metadata = {
   description: 'Human Resource Management System',
 }
 
+import { AuthProvider } from '@/components/providers/AuthContext';
+import { Toaster } from '@/components/ui/toaster';
+
 export default function RootLayout({
   children,
 }: {
@@ -13,7 +16,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <AuthProvider>
+          {children}
+        </AuthProvider>
+        <Toaster />
+      </body>
     </html>
   )
 }

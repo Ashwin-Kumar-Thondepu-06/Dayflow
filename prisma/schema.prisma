@@ -89,21 +89,36 @@ enum TokenType {
   RESET_PASSWORD
 }
 
+model Company {
+  id        String     @id @default(uuid())
+  name      String     @unique
+  logoUrl   String?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  users     User[]
+  employees Employee[]
+}
+
 model User {
-  id            String       @id @default(uuid())
-  email         String       @unique
+  id            String     @id @default(uuid())
+  email         String     @unique
   passwordHash  String
   role          UserRole
-  emailVerified Boolean      @default(false)
-  status        UserStatus   @default(ACTIVE)
+  emailVerified Boolean    @default(false)
+  status        UserStatus @default(ACTIVE)
+  forcePasswordChange Boolean @default(false)
   lastLoginAt   DateTime?
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+  companyId     String
+  company       Company    @relation(fields: [companyId], references: [id])
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
 
   employee      Employee?
   notifications Notification[]
   auditLogs     AuditLog[]
   tokens        Token[]
+
+  @@index([companyId])
 }
 
 model Token {
@@ -123,6 +138,8 @@ model Employee {
   id             String         @id @default(uuid())
   userId         String         @unique
   user           User           @relation(fields: [userId], references: [id])
+  companyId      String
+  company        Company        @relation(fields: [companyId], references: [id])
   employeeCode   String         @unique
   firstName      String
   lastName       String
@@ -151,28 +168,29 @@ model Employee {
 
   @@index([employeeCode])
   @@index([userId])
+  @@index([companyId])
   @@index([departmentId])
   @@index([designationId])
 }
 
 model Department {
-  id          String     @id @default(uuid())
-  name        String     @unique
+  id          String   @id @default(uuid())
+  name        String   @unique
   description String?
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  employees   Employee[]
+  employees Employee[]
 }
 
 model Designation {
-  id          String     @id @default(uuid())
-  name        String     @unique
+  id          String   @id @default(uuid())
+  name        String   @unique
   description String?
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  employees   Employee[]
+  employees Employee[]
 }
 
 model Attendance {
@@ -190,7 +208,7 @@ model Attendance {
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
 
-  events          AttendanceEvent[]
+  events AttendanceEvent[]
 
   @@unique([employeeId, date])
   @@index([employeeId])
@@ -210,14 +228,14 @@ model AttendanceEvent {
 }
 
 model LeaveType {
-  id          String     @id @default(uuid())
-  name        String     @unique
+  id          String   @id @default(uuid())
+  name        String   @unique
   description String?
   defaultDays Int
-  isPaid      Boolean    @default(true)
-  isActive    Boolean    @default(true)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  isPaid      Boolean  @default(true)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   leaveBalances LeaveBalance[]
   leaveRequests LeaveRequest[]
@@ -256,7 +274,7 @@ model LeaveRequest {
   createdAt   DateTime           @default(now())
   updatedAt   DateTime           @updatedAt
 
-  approvals   LeaveApproval[]
+  approvals LeaveApproval[]
 
   @@index([employeeId])
   @@index([status])
@@ -289,22 +307,22 @@ model SalaryStructure {
   createdAt     DateTime              @default(now())
   updatedAt     DateTime              @updatedAt
 
-  components    SalaryComponent[]
+  components SalaryComponent[]
 
   @@index([employeeId])
   @@index([effectiveFrom])
 }
 
 model SalaryComponent {
-  id                String            @id @default(uuid())
+  id                String              @id @default(uuid())
   salaryStructureId String
-  salaryStructure   SalaryStructure   @relation(fields: [salaryStructureId], references: [id])
+  salaryStructure   SalaryStructure     @relation(fields: [salaryStructureId], references: [id])
   name              String
   type              SalaryComponentType
   amount            Float
-  isPercentage      Boolean           @default(false)
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  isPercentage      Boolean             @default(false)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
 }
 
 model PayrollRun {
@@ -316,7 +334,7 @@ model PayrollRun {
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
 
-  payslips    Payslip[]
+  payslips Payslip[]
 
   @@unique([periodStart, periodEnd])
 }

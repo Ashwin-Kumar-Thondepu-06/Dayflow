@@ -30,6 +30,14 @@ async function main() {
   ]);
   console.log('Created 3 Leave Types');
 
+  // 3.5 Create Company
+  const company = await prisma.company.create({
+    data: {
+      name: 'Odoo India',
+    },
+  });
+  console.log('Created Company');
+
   // 4. Create Admin User & Employee
   const adminUser = await prisma.user.create({
     data: {
@@ -38,13 +46,15 @@ async function main() {
       role: UserRole.ADMIN,
       emailVerified: true,
       status: UserStatus.ACTIVE,
+      companyId: company.id,
     },
   });
 
   const adminEmployee = await prisma.employee.create({
     data: {
       userId: adminUser.id,
-      employeeCode: 'EMP-001',
+      companyId: company.id,
+      employeeCode: 'OIADMI20230001',
       firstName: 'Admin',
       lastName: 'User',
       joiningDate: new Date('2023-01-01'),
@@ -65,13 +75,15 @@ async function main() {
         role: UserRole.EMPLOYEE,
         emailVerified: true,
         status: UserStatus.ACTIVE,
+        companyId: company.id,
       },
     });
 
     const emp = await prisma.employee.create({
       data: {
         userId: user.id,
-        employeeCode: `EMP-${(i + 1).toString().padStart(3, '0')}`,
+        companyId: company.id,
+        employeeCode: `OIJODO2023${(i + 1).toString().padStart(4, '0')}`,
         firstName: `John`,
         lastName: `Doe${i}`,
         joiningDate: new Date(`2023-02-${i.toString().padStart(2, '0')}`),

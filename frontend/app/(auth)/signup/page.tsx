@@ -24,33 +24,54 @@ import {
 } from "@/components/ui/select"
 import { useToast } from "@/components/ui/use-toast"
 import { fetchApi } from "@/lib/api"
+import { useAuth } from "@/components/providers/AuthContext"
 
 export default function SignUpPage() {
   const router = useRouter()
   const { toast } = useToast()
+  const { login } = useAuth()
 
   const [isLoading, setIsLoading] = React.useState<boolean>(false)
-  const [employeeCode, setEmployeeCode] = React.useState("")
+  const [companyName, setCompanyName] = React.useState("")
+  const [firstName, setFirstName] = React.useState("")
+  const [lastName, setLastName] = React.useState("")
   const [email, setEmail] = React.useState("")
-  const [role, setRole] = React.useState<string>("")
+  const [phone, setPhone] = React.useState("")
   const [password, setPassword] = React.useState("")
+  const [confirmPassword, setConfirmPassword] = React.useState("")
+  const [logo, setLogo] = React.useState<File | null>(null)
 
   async function onSubmit(event: React.SyntheticEvent) {
     event.preventDefault()
     setIsLoading(true)
 
+    if (password !== confirmPassword) {
+      toast({ variant: "destructive", title: "Error", description: "Passwords do not match." });
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      await fetchApi('/auth/register', {
+      const formData = new FormData();
+      formData.append('companyName', companyName);
+      formData.append('firstName', firstName);
+      formData.append('lastName', lastName);
+      formData.append('email', email);
+      formData.append('phone', phone);
+      formData.append('password', password);
+      if (logo) formData.append('logo', logo);
+
+      const response = await fetchApi('/auth/register', {
         method: 'POST',
-        body: JSON.stringify({ employeeCode, email, password, role: role.toUpperCase() }),
+        body: formData, // fetchApi will not stringify if body is FormData
       })
 
       toast({
         title: "Account Created",
-        description: "Your account has been created successfully. Please sign in.",
+        description: "Your account has been created and you are now logged in.",
       })
 
-      router.push('/login')
+      login(response.data)
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -76,17 +97,44 @@ export default function SignUpPage() {
         <form onSubmit={onSubmit}>
           <div className="grid gap-5">
             <div className="grid gap-2.5">
-              <Label htmlFor="employeeId" className="font-semibold text-slate-700 ml-1">Employee ID</Label>
+              <Label htmlFor="companyName" className="font-semibold text-slate-700 ml-1">Company Name</Label>
               <Input
-                id="employeeId"
+                id="companyName"
                 type="text"
-                placeholder="EMP001"
+                placeholder="Dayflow Inc."
                 disabled={isLoading}
-                value={employeeCode}
-                onChange={(e) => setEmployeeCode(e.target.value)}
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
                 className="bg-slate-50/50 border-slate-200/80 focus-visible:ring-[#714B67]/20 focus-visible:border-[#714B67] h-12 rounded-xl transition-all px-4 text-base"
                 required
               />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2.5">
+                <Label htmlFor="firstName" className="font-semibold text-slate-700 ml-1">First Name</Label>
+                <Input
+                  id="firstName"
+                  type="text"
+                  placeholder="John"
+                  disabled={isLoading}
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  className="bg-slate-50/50 border-slate-200/80 focus-visible:ring-[#714B67]/20 focus-visible:border-[#714B67] h-12 rounded-xl transition-all px-4 text-base"
+                  required
+                />
+              </div>
+              <div className="grid gap-2.5">
+                <Label htmlFor="lastName" className="font-semibold text-slate-700 ml-1">Last Name</Label>
+                <Input
+                  id="lastName"
+                  type="text"
+                  placeholder="Doe"
+                  disabled={isLoading}
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  className="bg-slate-50/50 border-slate-200/80 focus-visible:ring-[#714B67]/20 focus-visible:border-[#714B67] h-12 rounded-xl transition-all px-4 text-base"
+                />
+              </div>
             </div>
             <div className="grid gap-2.5">
               <Label htmlFor="email" className="font-semibold text-slate-700 ml-1">Email</Label>
@@ -105,21 +153,27 @@ export default function SignUpPage() {
               />
             </div>
             <div className="grid gap-2.5">
-              <Label htmlFor="role" className="font-semibold text-slate-700 ml-1">Role</Label>
-              <Select 
-                disabled={isLoading} 
-                required 
-                value={role} 
-                onValueChange={setRole}
-              >
-                <SelectTrigger id="role" className="bg-slate-50/50 border-slate-200/80 focus:ring-[#714B67]/20 focus:border-[#714B67] h-12 rounded-xl transition-all px-4 text-base">
-                  <SelectValue placeholder="Select a role" />
-                </SelectTrigger>
-                <SelectContent className="rounded-xl border-slate-200 shadow-lg">
-                  <SelectItem value="employee" className="rounded-lg cursor-pointer hover:bg-slate-50">Employee</SelectItem>
-                  <SelectItem value="hr" className="rounded-lg cursor-pointer hover:bg-slate-50">Admin / HR Officer</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label htmlFor="phone" className="font-semibold text-slate-700 ml-1">Phone</Label>
+              <Input
+                id="phone"
+                type="tel"
+                placeholder="+1 (555) 000-0000"
+                disabled={isLoading}
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="bg-slate-50/50 border-slate-200/80 focus-visible:ring-[#714B67]/20 focus-visible:border-[#714B67] h-12 rounded-xl transition-all px-4 text-base"
+              />
+            </div>
+            <div className="grid gap-2.5">
+              <Label htmlFor="logo" className="font-semibold text-slate-700 ml-1">Company Logo</Label>
+              <Input
+                id="logo"
+                type="file"
+                accept="image/*"
+                disabled={isLoading}
+                onChange={(e) => setLogo(e.target.files?.[0] || null)}
+                className="bg-slate-50/50 border-slate-200/80 focus-visible:ring-[#714B67]/20 focus-visible:border-[#714B67] rounded-xl transition-all px-4 text-base file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#714B67]/10 file:text-[#714B67] hover:file:bg-[#714B67]/20 pt-2 h-12"
+              />
             </div>
             <div className="grid gap-2.5">
               <Label htmlFor="password" className="font-semibold text-slate-700 ml-1">Password</Label>
@@ -129,6 +183,18 @@ export default function SignUpPage() {
                 disabled={isLoading}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                className="bg-slate-50/50 border-slate-200/80 focus-visible:ring-[#714B67]/20 focus-visible:border-[#714B67] h-12 rounded-xl transition-all px-4 text-base"
+                required
+              />
+            </div>
+            <div className="grid gap-2.5">
+              <Label htmlFor="confirmPassword" className="font-semibold text-slate-700 ml-1">Confirm Password</Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                disabled={isLoading}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
                 className="bg-slate-50/50 border-slate-200/80 focus-visible:ring-[#714B67]/20 focus-visible:border-[#714B67] h-12 rounded-xl transition-all px-4 text-base"
                 required
               />

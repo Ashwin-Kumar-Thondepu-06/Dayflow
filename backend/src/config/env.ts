@@ -19,6 +19,12 @@ const envSchema = z.object({
   MINIO_SECRET_KEY: z.string().optional(),
   MINIO_BUCKET: z.string().optional(),
   MINIO_USE_SSL: z.string().optional(),
+  // Mailer
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.string().optional(),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  SMTP_FROM: z.string().optional(),
 });
 
 export const parseEnv = () => {
