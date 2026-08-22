@@ -33,7 +33,7 @@ export const getEmployeeById = async (req: Request, res: Response, next: NextFun
     if (!companyId) return res.status(401).json({ success: false, message: 'Company ID missing' });
 
     // Admins can see anyone, employees can see themselves
-    if (req.user.role !== 'COMPANY' && req.user.role !== 'ADMIN' && req.user.employeeId !== req.params.id) {
+    if (req.user?.role !== 'ADMIN' && req.user?.employeeId !== req.params.id) {
       return res.status(403).json({ success: false, message: 'Forbidden' });
     }
 
@@ -50,7 +50,7 @@ export const updateEmployee = async (req: Request, res: Response, next: NextFunc
     if (!companyId) return res.status(401).json({ success: false, message: 'Company ID missing' });
 
     // Admins can update anyone, employees can update themselves
-    if (req.user.role !== 'COMPANY' && req.user.role !== 'ADMIN' && req.user.employeeId !== req.params.id) {
+    if (req.user?.role !== 'ADMIN' && req.user?.employeeId !== req.params.id) {
       return res.status(403).json({ success: false, message: 'Forbidden' });
     }
 

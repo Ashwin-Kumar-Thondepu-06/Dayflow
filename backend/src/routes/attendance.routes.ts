@@ -5,8 +5,8 @@ import { authorize } from '../middleware/authorize';
 
 const router = Router();
 
-// Only ADMIN/COMPANY can view the full daily roster
-router.get('/', authenticate, authorize('ADMIN', 'COMPANY'), getDailyAttendance);
+// Only ADMIN can view the full daily roster
+router.get('/', authenticate, authorize('ADMIN'), getDailyAttendance);
 
 // Any authenticated employee can view their own monthly attendance
 router.get('/me', authenticate, getMyMonthlyAttendance);

@@ -5,8 +5,8 @@ import { authorize } from '../middleware/authorize';
 
 const router = Router();
 
-// Only ADMIN/COMPANY can create employees
-router.post('/', authenticate, authorize('ADMIN', 'COMPANY'), createEmployee);
+// Only ADMIN can create employees
+router.post('/', authenticate, authorize('ADMIN'), createEmployee);
 
 // Everyone authenticated can access these, but controller logic restricts access
 router.get('/', authenticate, getAllEmployees);

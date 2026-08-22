@@ -1,25 +1,35 @@
+"use client"
+
+import { useEffect, useState } from "react"
 import { PageHeader } from "@/components/common/PageHeader"
 import { StatCard } from "@/components/common/StatCard"
 import { DataTable, Column } from "@/components/common/DataTable"
 import { Users, FileBarChart2, ShieldCheck, Banknote } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
-
-const employeeData = [
-  { id: "EMP001", name: "Alice Johnson", role: "Software Engineer", status: "Active" },
-  { id: "EMP002", name: "Bob Smith", role: "Product Manager", status: "Active" },
-  { id: "EMP003", name: "Charlie Davis", role: "UX Designer", status: "On Leave" },
-  { id: "EMP004", name: "Diana Prince", role: "HR Specialist", status: "Active" },
-]
+import { fetchApi } from "@/lib/api"
+import Link from "next/link"
 
 const employeeColumns: Column<any>[] = [
-  { header: "ID", accessorKey: "id" },
-  { header: "Name", accessorKey: "name" },
-  { header: "Role", accessorKey: "role" },
+  { header: "ID", accessorKey: "employeeCode" },
+  { 
+    header: "Name", 
+    accessorKey: "firstName",
+    cell: (item) => (
+      <Link href={`/admin/employees/${item.id}`} className="hover:underline text-[#714B67] font-medium">
+        {item.firstName} {item.lastName}
+      </Link>
+    )
+  },
+  { 
+    header: "Role", 
+    accessorKey: "designation",
+    cell: (item) => item.designation?.name || 'N/A'
+  },
   { 
     header: "Status", 
     accessorKey: "status",
     cell: (item) => (
-      <Badge variant={item.status === "Active" ? "success" : "warning"}>
+      <Badge variant={item.status === "ACTIVE" ? "success" : "warning"}>
         {item.status}
       </Badge>
     )
@@ -27,6 +37,25 @@ const employeeColumns: Column<any>[] = [
 ]
 
 export default function AdminDashboardPage() {
+  const [employees, setEmployees] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const response = await fetchApi('/employees')
+        if (response.success) {
+          setEmployees(response.data.slice(0, 5)) // show top 5 recent
+        }
+      } catch (error) {
+        console.error("Failed to load dashboard data", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadData()
+  }, [])
+
   return (
     <div className="space-y-6">
       <PageHeader 
@@ -37,7 +66,7 @@ export default function AdminDashboardPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Total Employees"
-          value="248"
+          value={loading ? "..." : employees.length.toString()}
           icon={Users}
           trend="up"
           trendValue="+12"
@@ -68,7 +97,7 @@ export default function AdminDashboardPage() {
 
       <div className="space-y-4">
         <h3 className="text-lg font-semibold tracking-tight">Recent Employee Activity</h3>
-        <DataTable columns={employeeColumns} data={employeeData} />
+        <DataTable columns={employeeColumns} data={employees} />
       </div>
     </div>
   )
