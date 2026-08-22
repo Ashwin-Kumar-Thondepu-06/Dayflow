@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
+import { useRouter, useSearchParams } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -14,17 +15,55 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { useToast } from "@/components/ui/use-toast"
+import { fetchApi } from "@/lib/api"
 
-export default function ResetPasswordPage() {
+function ResetPasswordForm() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const { toast } = useToast()
+  
+  const token = searchParams.get("token")
+  
   const [isLoading, setIsLoading] = React.useState<boolean>(false)
+  const [password, setPassword] = React.useState("")
+  const [confirmPassword, setConfirmPassword] = React.useState("")
 
   async function onSubmit(event: React.SyntheticEvent) {
     event.preventDefault()
+    
+    if (password !== confirmPassword) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Passwords do not match.",
+      })
+      return
+    }
+
     setIsLoading(true)
 
-    setTimeout(() => {
+    try {
+      await fetchApi('/auth/reset-password', {
+        method: 'POST',
+        body: JSON.stringify({ token, newPassword: password }),
+      })
+
+      toast({
+        title: "Success",
+        description: "Your password has been successfully reset.",
+      })
+      
+      router.push('/login')
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to reset password. The link might be expired.",
+      })
+    } finally {
       setIsLoading(false)
-    }, 1000)
+    }
   }
 
   return (
@@ -46,6 +85,8 @@ export default function ResetPasswordPage() {
                 id="password"
                 type="password"
                 disabled={isLoading}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 required
               />
             </div>
@@ -55,6 +96,8 @@ export default function ResetPasswordPage() {
                 id="confirm-password"
                 type="password"
                 disabled={isLoading}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
                 required
               />
             </div>
@@ -75,5 +118,13 @@ export default function ResetPasswordPage() {
         </p>
       </CardFooter>
     </Card>
+  )
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <React.Suspense fallback={<div>Loading...</div>}>
+      <ResetPasswordForm />
+    </React.Suspense>
   )
 }

@@ -14,17 +14,38 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { useToast } from "@/components/ui/use-toast"
+import { fetchApi } from "@/lib/api"
 
 export default function ForgetPasswordPage() {
+  const { toast } = useToast()
+  
   const [isLoading, setIsLoading] = React.useState<boolean>(false)
+  const [email, setEmail] = React.useState("")
 
   async function onSubmit(event: React.SyntheticEvent) {
     event.preventDefault()
     setIsLoading(true)
 
-    setTimeout(() => {
+    try {
+      await fetchApi('/auth/forgot-password', {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+      })
+
+      toast({
+        title: "Link Sent",
+        description: "If an account exists, a reset link has been sent to your email.",
+      })
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to send reset link.",
+      })
+    } finally {
       setIsLoading(false)
-    }, 1000)
+    }
   }
 
   return (
@@ -50,6 +71,8 @@ export default function ForgetPasswordPage() {
                 autoComplete="email"
                 autoCorrect="off"
                 disabled={isLoading}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 required
               />
             </div>

@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -21,17 +22,44 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { useToast } from "@/components/ui/use-toast"
+import { fetchApi } from "@/lib/api"
 
 export default function SignUpPage() {
+  const router = useRouter()
+  const { toast } = useToast()
+
   const [isLoading, setIsLoading] = React.useState<boolean>(false)
+  const [employeeCode, setEmployeeCode] = React.useState("")
+  const [email, setEmail] = React.useState("")
+  const [role, setRole] = React.useState<string>("")
+  const [password, setPassword] = React.useState("")
 
   async function onSubmit(event: React.SyntheticEvent) {
     event.preventDefault()
     setIsLoading(true)
 
-    setTimeout(() => {
+    try {
+      await fetchApi('/auth/register', {
+        method: 'POST',
+        body: JSON.stringify({ employeeCode, email, password, role: role.toUpperCase() }),
+      })
+
+      toast({
+        title: "Account Created",
+        description: "Your account has been created successfully. Please sign in.",
+      })
+
+      router.push('/login')
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Registration Failed",
+        description: error.message || "Something went wrong. Please try again.",
+      })
+    } finally {
       setIsLoading(false)
-    }, 1000)
+    }
   }
 
   return (
@@ -54,6 +82,8 @@ export default function SignUpPage() {
                 type="text"
                 placeholder="EMP001"
                 disabled={isLoading}
+                value={employeeCode}
+                onChange={(e) => setEmployeeCode(e.target.value)}
                 required
               />
             </div>
@@ -67,12 +97,19 @@ export default function SignUpPage() {
                 autoComplete="email"
                 autoCorrect="off"
                 disabled={isLoading}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 required
               />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="role">Role</Label>
-              <Select disabled={isLoading} required>
+              <Select 
+                disabled={isLoading} 
+                required 
+                value={role} 
+                onValueChange={setRole}
+              >
                 <SelectTrigger id="role">
                   <SelectValue placeholder="Select a role" />
                 </SelectTrigger>
@@ -88,6 +125,8 @@ export default function SignUpPage() {
                 id="password"
                 type="password"
                 disabled={isLoading}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 required
               />
             </div>

@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
+import { useSearchParams } from "next/navigation"
 import { MailCheck } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -13,18 +14,46 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { useToast } from "@/components/ui/use-toast"
+import { fetchApi } from "@/lib/api"
 
-export default function VerifyEmailPage() {
+function VerifyEmailForm() {
+  const searchParams = useSearchParams()
+  const { toast } = useToast()
+  
+  const token = searchParams.get("token")
+  
   const [isLoading, setIsLoading] = React.useState<boolean>(false)
+  const [isVerified, setIsVerified] = React.useState<boolean>(false)
 
-  async function onResend(event: React.SyntheticEvent) {
-    event.preventDefault()
-    setIsLoading(true)
+  React.useEffect(() => {
+    async function verifyToken(tokenString: string) {
+      setIsLoading(true)
+      try {
+        await fetchApi('/auth/verify-email', {
+          method: 'POST',
+          body: JSON.stringify({ token: tokenString }),
+        })
+        setIsVerified(true)
+        toast({
+          title: "Verified",
+          description: "Your email has been successfully verified. You can now sign in.",
+        })
+      } catch (error: any) {
+        toast({
+          variant: "destructive",
+          title: "Verification Failed",
+          description: error.message || "Invalid or expired token.",
+        })
+      } finally {
+        setIsLoading(false)
+      }
+    }
 
-    setTimeout(() => {
-      setIsLoading(false)
-    }, 1000)
-  }
+    if (token) {
+      verifyToken(token)
+    }
+  }, [token, toast])
 
   return (
     <Card className="border-0 shadow-none lg:border lg:shadow-sm">
@@ -34,17 +63,21 @@ export default function VerifyEmailPage() {
         </div>
         <div className="space-y-2">
           <CardTitle className="text-2xl font-semibold tracking-tight">
-            Check your email
+            {isVerified ? "Email verified" : "Check your email"}
           </CardTitle>
           <CardDescription>
-            We sent a verification link to your email address. Please click the link to verify your account.
+            {isVerified 
+              ? "Your account is now verified and active." 
+              : "We sent a verification link to your email address. Please click the link to verify your account."}
           </CardDescription>
         </div>
       </CardHeader>
       <CardContent>
         <div className="grid gap-4">
-          <Button variant="outline" onClick={onResend} disabled={isLoading}>
-            {isLoading ? "Resending..." : "Resend Verification Link"}
+          <Button variant="outline" disabled={isLoading || isVerified} onClick={() => {
+            toast({ description: "Resend functionality not yet implemented in backend." })
+          }}>
+            {isLoading ? "Verifying..." : isVerified ? "Verified" : "Resend Verification Link"}
           </Button>
         </div>
       </CardContent>
@@ -59,5 +92,13 @@ export default function VerifyEmailPage() {
         </p>
       </CardFooter>
     </Card>
+  )
+}
+
+export default function VerifyEmailPage() {
+  return (
+    <React.Suspense fallback={<div>Loading...</div>}>
+      <VerifyEmailForm />
+    </React.Suspense>
   )
 }

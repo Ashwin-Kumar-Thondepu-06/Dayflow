@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -14,17 +15,47 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { useToast } from "@/components/ui/use-toast"
+import { fetchApi } from "@/lib/api"
 
 export default function LoginPage() {
+  const router = useRouter()
+  const { toast } = useToast()
+  
   const [isLoading, setIsLoading] = React.useState<boolean>(false)
+  const [email, setEmail] = React.useState("")
+  const [password, setPassword] = React.useState("")
 
   async function onSubmit(event: React.SyntheticEvent) {
     event.preventDefault()
     setIsLoading(true)
 
-    setTimeout(() => {
+    try {
+      const response = await fetchApi('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ email, password }),
+      })
+
+      toast({
+        title: "Success",
+        description: "Logged in successfully.",
+      })
+
+      // Redirect based on role
+      if (response.data?.role === 'EMPLOYEE') {
+        router.push('/employee/dashboard')
+      } else {
+        router.push('/admin/dashboard')
+      }
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to sign in. Please try again.",
+      })
+    } finally {
       setIsLoading(false)
-    }, 1000)
+    }
   }
 
   return (
@@ -50,6 +81,8 @@ export default function LoginPage() {
                 autoComplete="email"
                 autoCorrect="off"
                 disabled={isLoading}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 required
               />
             </div>
@@ -67,6 +100,8 @@ export default function LoginPage() {
                 id="password"
                 type="password"
                 disabled={isLoading}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 required
               />
             </div>
