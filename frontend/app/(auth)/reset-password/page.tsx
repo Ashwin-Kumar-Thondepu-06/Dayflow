@@ -67,51 +67,53 @@ function ResetPasswordForm() {
   }
 
   return (
-    <Card className="border-0 shadow-none lg:border lg:shadow-sm">
-      <CardHeader className="space-y-1">
-        <CardTitle className="text-2xl font-semibold tracking-tight text-center">
+    <Card className="border border-slate-200/60 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.05)] bg-white/80 backdrop-blur-2xl sm:p-4 rounded-[2rem]">
+      <CardHeader className="space-y-2 pb-8">
+        <CardTitle className="text-3xl font-extrabold tracking-tight text-center text-slate-900">
           Reset password
         </CardTitle>
-        <CardDescription className="text-center">
+        <CardDescription className="text-center text-slate-500 text-base">
           Enter your new password below to reset it.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={onSubmit}>
-          <div className="grid gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="password">New Password</Label>
+          <div className="grid gap-5">
+            <div className="grid gap-2.5">
+              <Label htmlFor="password" className="font-semibold text-slate-700 ml-1">New Password</Label>
               <Input
                 id="password"
                 type="password"
                 disabled={isLoading}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                className="bg-slate-50/50 border-slate-200/80 focus-visible:ring-[#714B67]/20 focus-visible:border-[#714B67] h-12 rounded-xl transition-all px-4 text-base"
                 required
               />
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="confirm-password">Confirm Password</Label>
+            <div className="grid gap-2.5">
+              <Label htmlFor="confirm-password" className="font-semibold text-slate-700 ml-1">Confirm Password</Label>
               <Input
                 id="confirm-password"
                 type="password"
                 disabled={isLoading}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
+                className="bg-slate-50/50 border-slate-200/80 focus-visible:ring-[#714B67]/20 focus-visible:border-[#714B67] h-12 rounded-xl transition-all px-4 text-base"
                 required
               />
             </div>
-            <Button disabled={isLoading}>
+            <Button disabled={isLoading} className="mt-4 h-12 text-base font-semibold rounded-xl bg-[#714B67] hover:bg-[#5a3a52] text-white shadow-[0_4px_14px_0_rgba(113,75,103,0.39)] hover:shadow-[0_6px_20px_rgba(113,75,103,0.3)] hover:-translate-y-0.5 transition-all duration-300">
               {isLoading ? "Resetting..." : "Reset Password"}
             </Button>
           </div>
         </form>
       </CardContent>
       <CardFooter>
-        <p className="px-8 text-center text-sm text-muted-foreground w-full">
+        <p className="px-8 text-center text-sm font-medium text-slate-500 w-full">
           <Link
             href="/login"
-            className="hover:text-primary hover:underline underline-offset-4 font-medium text-primary"
+            className="font-bold text-[#714B67] hover:text-[#5a3a52] transition-colors"
           >
             Back to login
           </Link>

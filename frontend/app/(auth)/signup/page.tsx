@@ -63,20 +63,20 @@ export default function SignUpPage() {
   }
 
   return (
-    <Card className="border-0 shadow-none lg:border lg:shadow-sm">
-      <CardHeader className="space-y-1">
-        <CardTitle className="text-2xl font-semibold tracking-tight text-center">
+    <Card className="border border-slate-200/60 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.05)] bg-white/80 backdrop-blur-2xl sm:p-4 rounded-[2rem]">
+      <CardHeader className="space-y-2 pb-8">
+        <CardTitle className="text-3xl font-extrabold tracking-tight text-center text-slate-900">
           Create an account
         </CardTitle>
-        <CardDescription className="text-center">
+        <CardDescription className="text-center text-slate-500 text-base">
           Enter your details to create your Dayflow account
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={onSubmit}>
-          <div className="grid gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="employeeId">Employee ID</Label>
+          <div className="grid gap-5">
+            <div className="grid gap-2.5">
+              <Label htmlFor="employeeId" className="font-semibold text-slate-700 ml-1">Employee ID</Label>
               <Input
                 id="employeeId"
                 type="text"
@@ -84,11 +84,12 @@ export default function SignUpPage() {
                 disabled={isLoading}
                 value={employeeCode}
                 onChange={(e) => setEmployeeCode(e.target.value)}
+                className="bg-slate-50/50 border-slate-200/80 focus-visible:ring-[#714B67]/20 focus-visible:border-[#714B67] h-12 rounded-xl transition-all px-4 text-base"
                 required
               />
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
+            <div className="grid gap-2.5">
+              <Label htmlFor="email" className="font-semibold text-slate-700 ml-1">Email</Label>
               <Input
                 id="email"
                 type="email"
@@ -99,49 +100,51 @@ export default function SignUpPage() {
                 disabled={isLoading}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                className="bg-slate-50/50 border-slate-200/80 focus-visible:ring-[#714B67]/20 focus-visible:border-[#714B67] h-12 rounded-xl transition-all px-4 text-base"
                 required
               />
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="role">Role</Label>
+            <div className="grid gap-2.5">
+              <Label htmlFor="role" className="font-semibold text-slate-700 ml-1">Role</Label>
               <Select 
                 disabled={isLoading} 
                 required 
                 value={role} 
                 onValueChange={setRole}
               >
-                <SelectTrigger id="role">
+                <SelectTrigger id="role" className="bg-slate-50/50 border-slate-200/80 focus:ring-[#714B67]/20 focus:border-[#714B67] h-12 rounded-xl transition-all px-4 text-base">
                   <SelectValue placeholder="Select a role" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="employee">Employee</SelectItem>
-                  <SelectItem value="hr">Admin / HR Officer</SelectItem>
+                <SelectContent className="rounded-xl border-slate-200 shadow-lg">
+                  <SelectItem value="employee" className="rounded-lg cursor-pointer hover:bg-slate-50">Employee</SelectItem>
+                  <SelectItem value="hr" className="rounded-lg cursor-pointer hover:bg-slate-50">Admin / HR Officer</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="password">Password</Label>
+            <div className="grid gap-2.5">
+              <Label htmlFor="password" className="font-semibold text-slate-700 ml-1">Password</Label>
               <Input
                 id="password"
                 type="password"
                 disabled={isLoading}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                className="bg-slate-50/50 border-slate-200/80 focus-visible:ring-[#714B67]/20 focus-visible:border-[#714B67] h-12 rounded-xl transition-all px-4 text-base"
                 required
               />
             </div>
-            <Button disabled={isLoading}>
+            <Button disabled={isLoading} className="mt-4 h-12 text-base font-semibold rounded-xl bg-[#714B67] hover:bg-[#5a3a52] text-white shadow-[0_4px_14px_0_rgba(113,75,103,0.39)] hover:shadow-[0_6px_20px_rgba(113,75,103,0.3)] hover:-translate-y-0.5 transition-all duration-300">
               {isLoading ? "Creating account..." : "Sign Up"}
             </Button>
           </div>
         </form>
       </CardContent>
       <CardFooter>
-        <p className="px-8 text-center text-sm text-muted-foreground w-full">
+        <p className="px-8 text-center text-sm font-medium text-slate-500 w-full">
           Already have an account?{" "}
           <Link
             href="/login"
-            className="hover:text-primary hover:underline underline-offset-4 font-medium text-primary"
+            className="font-bold text-[#714B67] hover:text-[#5a3a52] transition-colors"
           >
             Sign in
           </Link>
