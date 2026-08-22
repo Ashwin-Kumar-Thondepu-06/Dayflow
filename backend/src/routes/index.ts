@@ -24,8 +24,28 @@ router.get('/health/database', async (req, res, next) => {
 });
 
 import authRoutes from '../modules/auth/auth.routes';
+import { authenticate } from '../middleware/authMiddleware';
+import { authorize } from '../middleware/authorize';
+import { checkOwnership } from '../middleware/checkOwnership';
 
 // Feature routes will be registered here in the future
 router.use('/auth', authRoutes);
+
+// Test routes for RBAC
+router.get('/test/public', (req, res) => {
+  res.json({ message: 'Public endpoint' });
+});
+
+router.get('/test/protected', authenticate, (req, res) => {
+  res.json({ message: 'Authenticated endpoint', user: req.user });
+});
+
+router.get('/test/admin-only', authenticate, authorize('ADMIN'), (req, res) => {
+  res.json({ message: 'Admin endpoint accepted', user: req.user });
+});
+
+router.get('/test/employee-only', authenticate, authorize('EMPLOYEE'), (req, res) => {
+  res.json({ message: 'Employee endpoint accepted', user: req.user });
+});
 
 export default router;
