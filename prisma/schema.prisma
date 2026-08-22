@@ -83,6 +83,12 @@ enum NotificationType {
   SYSTEM
 }
 
+enum TokenType {
+  REFRESH_TOKEN
+  VERIFY_EMAIL
+  RESET_PASSWORD
+}
+
 model User {
   id            String       @id @default(uuid())
   email         String       @unique
@@ -97,6 +103,20 @@ model User {
   employee      Employee?
   notifications Notification[]
   auditLogs     AuditLog[]
+  tokens        Token[]
+}
+
+model Token {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  type      TokenType
+  expiresAt DateTime
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@index([tokenHash])
 }
 
 model Employee {

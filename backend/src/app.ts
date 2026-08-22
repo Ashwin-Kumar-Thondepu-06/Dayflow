@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
 import { config } from './config';
 import { requestId } from './middleware/requestId';
 import { apiRateLimiter } from './middleware/rateLimiter';
@@ -23,6 +24,7 @@ app.use(
 // 2. Parsers
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+app.use(cookieParser());
 
 // 3. Request Tracking & Logging
 app.use(requestId);

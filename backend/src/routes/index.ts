@@ -23,7 +23,9 @@ router.get('/health/database', async (req, res, next) => {
   }
 });
 
+import authRoutes from '../modules/auth/auth.routes';
+
 // Feature routes will be registered here in the future
-// router.use('/users', userRoutes);
+router.use('/auth', authRoutes);
 
 export default router;
