@@ -6,3 +6,366 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+enum UserRole {
+  ADMIN
+  EMPLOYEE
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  INACTIVE
+  ON_LEAVE
+  TERMINATED
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  HALF_DAY
+  LEAVE
+}
+
+enum AttendanceEventType {
+  CHECK_IN
+  CHECK_OUT
+  MANUAL_UPDATE
+}
+
+enum LeaveRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum LeaveApprovalStatus {
+  APPROVED
+  REJECTED
+}
+
+enum SalaryStructureStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum SalaryComponentType {
+  EARNING
+  DEDUCTION
+}
+
+enum PayrollRunStatus {
+  DRAFT
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum DocumentType {
+  PROFILE_PHOTO
+  IDENTITY
+  CONTRACT
+  CERTIFICATE
+  PAYSLIP
+  OTHER
+}
+
+enum NotificationType {
+  LEAVE
+  ATTENDANCE
+  PAYROLL
+  SYSTEM
+}
+
+model User {
+  id            String       @id @default(uuid())
+  email         String       @unique
+  passwordHash  String
+  role          UserRole
+  emailVerified Boolean      @default(false)
+  status        UserStatus   @default(ACTIVE)
+  lastLoginAt   DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  employee      Employee?
+  notifications Notification[]
+  auditLogs     AuditLog[]
+}
+
+model Employee {
+  id             String         @id @default(uuid())
+  userId         String         @unique
+  user           User           @relation(fields: [userId], references: [id])
+  employeeCode   String         @unique
+  firstName      String
+  lastName       String
+  phone          String?
+  dateOfBirth    DateTime?
+  joiningDate    DateTime
+  departmentId   String?
+  department     Department?    @relation(fields: [departmentId], references: [id])
+  designationId  String?
+  designation    Designation?   @relation(fields: [designationId], references: [id])
+  managerId      String?
+  manager        Employee?      @relation("EmployeeToManager", fields: [managerId], references: [id])
+  subordinates   Employee[]     @relation("EmployeeToManager")
+  profilePicture String?
+  status         EmployeeStatus @default(ACTIVE)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  attendances      Attendance[]
+  leaveRequests    LeaveRequest[]
+  leaveBalances    LeaveBalance[]
+  salaryStructures SalaryStructure[]
+  payslips         Payslip[]
+  documents        Document[]
+  leaveApprovals   LeaveApproval[]   @relation("Approver")
+
+  @@index([employeeCode])
+  @@index([userId])
+  @@index([departmentId])
+  @@index([designationId])
+}
+
+model Department {
+  id          String     @id @default(uuid())
+  name        String     @unique
+  description String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  employees   Employee[]
+}
+
+model Designation {
+  id          String     @id @default(uuid())
+  name        String     @unique
+  description String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  employees   Employee[]
+}
+
+model Attendance {
+  id              String           @id @default(uuid())
+  employeeId      String
+  employee        Employee         @relation(fields: [employeeId], references: [id])
+  date            DateTime         @db.Date
+  checkIn         DateTime?
+  checkOut        DateTime?
+  status          AttendanceStatus
+  totalMinutes    Int?
+  workMinutes     Int?
+  overtimeMinutes Int?
+  remarks         String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  events          AttendanceEvent[]
+
+  @@unique([employeeId, date])
+  @@index([employeeId])
+  @@index([date])
+  @@index([status])
+}
+
+model AttendanceEvent {
+  id           String              @id @default(uuid())
+  attendanceId String
+  attendance   Attendance          @relation(fields: [attendanceId], references: [id])
+  type         AttendanceEventType
+  timestamp    DateTime            @default(now())
+  ipAddress    String?
+  userAgent    String?
+  createdAt    DateTime            @default(now())
+}
+
+model LeaveType {
+  id          String     @id @default(uuid())
+  name        String     @unique
+  description String?
+  defaultDays Int
+  isPaid      Boolean    @default(true)
+  isActive    Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  leaveBalances LeaveBalance[]
+  leaveRequests LeaveRequest[]
+}
+
+model LeaveBalance {
+  id            String    @id @default(uuid())
+  employeeId    String
+  employee      Employee  @relation(fields: [employeeId], references: [id])
+  leaveTypeId   String
+  leaveType     LeaveType @relation(fields: [leaveTypeId], references: [id])
+  year          Int
+  allocatedDays Float
+  usedDays      Float     @default(0)
+  remainingDays Float
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([employeeId, leaveTypeId, year])
+  @@index([employeeId])
+  @@index([year])
+  @@index([leaveTypeId])
+}
+
+model LeaveRequest {
+  id          String             @id @default(uuid())
+  employeeId  String
+  employee    Employee           @relation(fields: [employeeId], references: [id])
+  leaveTypeId String
+  leaveType   LeaveType          @relation(fields: [leaveTypeId], references: [id])
+  startDate   DateTime           @db.Date
+  endDate     DateTime           @db.Date
+  totalDays   Float
+  remarks     String?
+  status      LeaveRequestStatus @default(PENDING)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  approvals   LeaveApproval[]
+
+  @@index([employeeId])
+  @@index([status])
+  @@index([startDate])
+  @@index([endDate])
+}
+
+model LeaveApproval {
+  id             String              @id @default(uuid())
+  leaveRequestId String
+  leaveRequest   LeaveRequest        @relation(fields: [leaveRequestId], references: [id])
+  approverId     String
+  approver       Employee            @relation("Approver", fields: [approverId], references: [id])
+  status         LeaveApprovalStatus
+  comment        String?
+  approvedAt     DateTime?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+}
+
+model SalaryStructure {
+  id            String                @id @default(uuid())
+  employeeId    String
+  employee      Employee              @relation(fields: [employeeId], references: [id])
+  effectiveFrom DateTime              @db.Date
+  effectiveTo   DateTime?             @db.Date
+  currency      String                @default("USD")
+  grossSalary   Float
+  status        SalaryStructureStatus @default(ACTIVE)
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+
+  components    SalaryComponent[]
+
+  @@index([employeeId])
+  @@index([effectiveFrom])
+}
+
+model SalaryComponent {
+  id                String            @id @default(uuid())
+  salaryStructureId String
+  salaryStructure   SalaryStructure   @relation(fields: [salaryStructureId], references: [id])
+  name              String
+  type              SalaryComponentType
+  amount            Float
+  isPercentage      Boolean           @default(false)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+}
+
+model PayrollRun {
+  id          String           @id @default(uuid())
+  periodStart DateTime         @db.Date
+  periodEnd   DateTime         @db.Date
+  status      PayrollRunStatus @default(DRAFT)
+  processedAt DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  payslips    Payslip[]
+
+  @@unique([periodStart, periodEnd])
+}
+
+model Payslip {
+  id              String     @id @default(uuid())
+  payrollRunId    String
+  payrollRun      PayrollRun @relation(fields: [payrollRunId], references: [id])
+  employeeId      String
+  employee        Employee   @relation(fields: [employeeId], references: [id])
+  grossAmount     Float
+  totalDeductions Float
+  netAmount       Float
+  currency        String     @default("USD")
+  documentId      String?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  @@index([employeeId])
+  @@index([payrollRunId])
+}
+
+model Document {
+  id           String       @id @default(uuid())
+  employeeId   String
+  employee     Employee     @relation(fields: [employeeId], references: [id])
+  documentType DocumentType
+  fileName     String
+  fileKey      String
+  mimeType     String
+  fileSize     Int
+  uploadedBy   String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@index([employeeId])
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id])
+  title     String
+  message   String
+  type      NotificationType
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+  readAt    DateTime?
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  actorId    String
+  actor      User     @relation(fields: [actorId], references: [id])
+  action     String
+  entityType String
+  entityId   String
+  oldValue   Json?
+  newValue   Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@index([actorId])
+  @@index([entityType])
+  @@index([entityId])
+  @@index([createdAt])
+}
